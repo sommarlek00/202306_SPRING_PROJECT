@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.askinmall.mapper.AdOrderMapper">
+
+	<sql id="period">
+		<if test="sDate != null and !sDate.equals('') and eDate != null and !eDate.equals('')">
+		<![CDATA[
+		ord_date >= to_date(#{sDate})
+		and
+		ord_date < to_date(#{eDate}) + 1
+		and
+		]]>
+		</if>	
+	</sql>
+
+
+	<sql id="criteria">
+	<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+		<foreach collection="cri.typeArr" item="type">
+			<trim prefix="OR">
+				<choose>
+					<when test="type == 'N'.toString()">
+						ord_no like '%' || #{cri.keyword} || '%'
+					</when>
+					<when test="type == 'I'.toString()">
+						user_id like '%' || #{cri.keyword} || '%'
+					</when>
+					<when test="type == 'R'.toString()">
+						ord_name like '%' || #{cri.keyword} || '%'
+					</when>
+				</choose>
+			</trim>
+		</foreach>
+	</trim>
+	</sql>
+
+
+	<select id="orderList" resultType="com.askinmall.domain.OrderVO">
+		<![CDATA[
+		SELECT
+			RN, ord_no, user_id, ord_name, ord_zipcode, ord_addr, ord_addr_detail, ord_phone, ord_total_amount, ord_date, pay_method
+		FROM (
+			SELECT /*+ INDEX_DESC(order_tb pk_ord_no) */
+			ROWNUM RN, ord_no, user_id, ord_name, ord_zipcode, ord_addr, ord_addr_detail, ord_phone, ord_total_amount, ord_date, pay_method
+		FROM order_tb
+		where
+		
+		]]>
+		<include refid="period"></include>
+		<include refid="criteria"></include>
+		
+		<![CDATA[
+			
+			ROWNUM <= (#{cri.pageNum} * #{cri.amount})	
+			
+		)
+		WHERE 
+			RN > ((#{cri.pageNum} - 1) * #{cri.amount})
+		]]>
+	</select>
+	
+	
+	<select id="getTotal" resultType="int">
+		select count(*)
+		from order_tb
+		where
+		<include refid="period"></include>
+		<include refid="criteria"></include>
+		ord_no > 0
+	</select>
+
+
+	<select id="orderInfo" resultType="com.askinmall.domain.OrderInfoVO">
+		select
+			odt.ord_no, odt.prod_no, odt.ord_detail_qty, odt.ord_detail_amount, pt.prod_name, pt.prod_upload_folder, pt.prod_img
+		from
+			order_detail_tb odt inner join product_tb pt
+		on
+			odt.prod_no = pt.prod_no
+		where
+			odt.ord_no = #{ord_no}	
+	</select>
+
+
+	<delete id="deleteOrderInfoProd">
+		delete from
+			order_detail_tb
+		where
+			ord_no = #{ord_no}
+		and
+			prod_no = #{prod_no}		
+	</delete>
+
+
+	<update id="modifyPayment">
+		update
+			payment_tb
+		set
+			pay_price = pay_price - #{ord_detail_amount}
+		where
+			ord_no = #{ord_no}
+	</update>
+	
+	
+	<update id="modifyOrder">
+		update
+			order_tb
+		set
+			ord_total_amount = 	ord_total_amount - #{ord_detail_amount}
+		where
+			ord_no = #{ord_no}
+	</update>
+	
+	
+	<delete id="deleteOrderDetail">
+		delete
+			order_detail_tb
+		where
+			ord_no = #{ord_no}	
+	</delete>
+	
+	
+	<delete id="deletePayment">
+		delete
+			payment_tb
+		where
+			ord_no = #{ord_no}		
+	</delete>
+	
+	
+	<delete id="deleteOrder">
+		delete
+			order_tb
+		where
+			ord_no = #{ord_no}		
+	</delete>
+	
+	
+		<select id="deletedOrderList" resultType="com.askinmall.domain.OrderVO">
+		<![CDATA[
+		SELECT
+			RN, ord_no, user_id, ord_name, ord_zipcode, ord_addr, ord_addr_detail, ord_phone, ord_total_amount, ord_date, delete_date
+		FROM (
+			SELECT /*+ INDEX_DESC(backup_order_tb backup_order_tb_pk) */
+			ROWNUM RN, ord_no, user_id, ord_name, ord_zipcode, ord_addr, ord_addr_detail, ord_phone, ord_total_amount, ord_date, delete_date
+		FROM backup_order_tb
+		where
+		
+		]]>
+		<include refid="criteria"></include>
+		
+		<![CDATA[
+			
+			ROWNUM <= (#{cri.pageNum} * #{cri.amount})	
+			
+		)
+		WHERE 
+			RN > ((#{cri.pageNum} - 1) * #{cri.amount})
+		]]>
+	</select>
+	
+	
+	<select id="getTotalDeletedOrder" resultType="int">
+		select count(*)
+		from backup_order_tb
+		where
+		<include refid="criteria"></include>
+		ord_no > 0
+	</select>
+	
+
+</mapper>  

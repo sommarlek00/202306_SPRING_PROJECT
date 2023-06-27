@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.askinmall.mapper.OrderMapper">
+
+	<insert id="orderSave" parameterType="com.askinmall.domain.OrderVO">
+		<selectKey keyProperty="ord_no" order="BEFORE" resultType="Long">
+			select seq_ord_no.nextval from dual
+		</selectKey>
+		
+		insert into
+			order_tb(ord_no, user_id, ord_name, ord_zipcode, ord_addr, ord_addr_detail, ord_phone, ord_total_amount, pay_method)
+			values(#{ord_no}, #{user_id}, #{ord_name}, #{ord_zipcode}, #{ord_addr}, #{ord_addr_detail}, #{ord_phone}, #{ord_total_amount}, #{pay_method})
+	</insert>
+	
+	
+	<insert id="orderDetailSave">
+		insert into
+			order_detail_tb(ord_no, prod_no, ord_detail_qty, ord_detail_amount)
+		select
+			#{ord_no}, c.prod_no, c.cart_qty, p.prod_price
+		from
+			cart_tb c inner join product_tb p 
+		on
+			c.prod_no = p.prod_no
+	</insert>
+	
+	
+	<insert id="paymentSave">
+		insert into
+			payment_tb(pay_no, ord_no, user_id, pay_method, pay_price, pay_user, pay_bank, pay_memo)
+			values(seq_pay_no.nextval, #{ord_no}, #{user_id}, #{pay_method}, #{pay_price}, #{pay_user}, #{pay_bank}, #{pay_memo})
+	</insert>
+
+
+
+</mapper>  

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.askinmall.mapper.ProductMapper">
+
+
+	<!-- 상품 목록 (1차 카테고리 클릭) -->
+	<select id="firstCategoryProdList" resultType="com.askinmall.domain.ProductVO">
+	<![CDATA[
+		select
+			rn, prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder, prod_img, prod_stock, prod_buy_state, upload_date, update_date
+		from
+			(
+			select /*+ INDEX_DESC(PRODUCT_TB PK_PROD_NO) */
+			rownum rn, prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder, prod_img, prod_stock, prod_buy_state, upload_date, update_date
+			from product_tb
+			where
+				category_cd in (select CATEGORY_CD from CATEGORY_TB where CATEGORY_CD_PRT = #{category_cd})
+			and
+				prod_buy_state = 'Y'
+			and		
+				rownum <= (#{cri.pageNum} * #{cri.amount})	
+				
+			)
+			where 
+				rn > ((#{cri.pageNum} - 1) * #{cri.amount})
+		]]>		
+	</select>
+	
+	
+	<!-- 상품 목록 데이터 개수 (1차 카테고리 클릭) -->
+	<select id="firstCategoryTotal" resultType="int">
+		select
+			count(*)
+		from
+			product_tb
+		where
+			category_cd in (select CATEGORY_CD from CATEGORY_TB where CATEGORY_CD_PRT = #{category_cd})
+		and
+			prod_buy_state = 'Y'
+	</select>
+	
+
+	<!-- 상품 목록 (2차 카테고리 클릭) -->
+	<select id="secondCategoryProdList" resultType="com.askinmall.domain.ProductVO">
+		<![CDATA[
+		select
+			rn, prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder, prod_img, prod_stock, prod_buy_state, upload_date, update_date
+		from (
+			select /*+ INDEX_DESC(PRODUCT_TB PK_PROD_NO) */
+			rownum rn, prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder, prod_img, prod_stock, prod_buy_state, upload_date, update_date
+			from product_tb
+			where
+				category_cd = #{category_cd}
+			and
+				prod_buy_state = 'Y'
+			and		
+				rownum <= (#{cri.pageNum} * #{cri.amount})	
+				
+			)
+			where 
+				rn > ((#{cri.pageNum} - 1) * #{cri.amount})
+			]]>
+	</select>
+	
+	
+	<!-- 상품 목록 데이터 개수 (2차 카테고리 클릭) -->
+	<select id="secondCategoryTotal" resultType="int">
+		select
+			count(*)
+		from
+			product_tb
+		where
+			category_cd = #{category_cd}
+		and
+			prod_buy_state = 'Y'
+	</select>
+	
+	
+	<!-- 상품 1차 카테고리 출력 -->
+	<select id="getCategoryList" resultType="com.askinmall.domain.CategoryVO">
+		select category_cd, category_cd_prt, category_name 
+		from category_tb
+		where category_cd_prt is null
+	</select>
+	
+	
+	<!-- 상품 2차 카테고리 출력 -->
+	<select id="subCategoryList" resultType="com.askinmall.domain.CategoryVO">
+		select category_cd, category_cd_prt, category_name
+		from category_tb
+		where category_cd_prt = #{category_cd}
+	</select>
+	
+		<!-- 상품 상세 페이지 -->
+	<select id="prodDetail" resultType="com.askinmall.domain.ProductVO">
+		select
+			prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder, prod_img, prod_stock, prod_buy_state, upload_date, update_date
+		from
+			product_tb	
+		where
+			prod_no = #{prod_no}
+	</select>
+	
+
+	
+
+
+</mapper>  

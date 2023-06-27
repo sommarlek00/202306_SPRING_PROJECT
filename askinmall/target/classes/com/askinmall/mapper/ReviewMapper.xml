@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.askinmall.mapper.ReviewMapper">
+
+
+
+  <select id="reviewList" resultType="com.askinmall.domain.ReviewVO">
+  <![CDATA[
+	select 
+		rn, review_no, user_id, prod_no, review_content, review_rating, upload_date
+	from
+		( 
+		select /*+ INDEX_DESC(REVIEW_TB PK_REVIEW_NO) */
+			rownum rn, review_no, user_id, prod_no, review_content, review_rating, upload_date
+		from
+			review_tb
+		where
+			prod_no = #{prod_no}
+		and
+			rownum <= (#{cri.pageNum} * #{cri.amount})
+		)
+		where
+			rn > ((#{cri.pageNum} - 1) * #{cri.amount})
+	]]>
+  </select>
+  
+
+  <select id="getTotal" resultType="int">
+  	select count(*) from review_tb where prod_no = #{prod_no}
+  </select>
+
+
+	<insert id="insertReview">
+		insert into review_tb(review_no, user_id, prod_no, review_content, review_rating)
+		values(seq_review_no.nextval, #{user_id}, #{prod_no}, #{review_content}, #{review_rating})
+	</insert>
+	
+	
+	<update id="modfiyReview">
+		update
+			review_tb
+		set
+			review_content = #{review_content},
+			review_rating = #{review_rating},
+			upload_date = sysdate	
+		where
+			review_no = #{review_no}
+	</update>
+	
+	
+	<delete id="deleteReview">
+		delete
+			review_tb
+		where
+			review_no = #{review_no}
+	</delete>
+
+
+</mapper>  

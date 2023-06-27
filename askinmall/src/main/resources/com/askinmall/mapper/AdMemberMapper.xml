@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <mapper namespace="com.askinmall.mapper.AdMemberMapper">
+ 
+ 	<sql id="criteria"><!-- 페이지가 처음 작동할 때는 Criteria클래스의 type의 값이 null이기 때문에 foreach문이 동작하지 않는다. 따라서 sql 구문이 생성되지 않는다-->
+	<trim prefix="(" suffix=") AND " prefixOverrides="OR"><!-- trim 태그 sql구문 중에 맨 앞에 or가 존재하면 제거  -->
+	<!-- 이렇게 나오게 해서 AND (title like '%제목%' or content like '%내용%') OR 가 먼저 처리될 수 있도록 처리해줌  -->
+		<foreach collection="typeArr" item="type">	<!-- myBatis에 의해 getter 메서드가 작동한다. typeArr에 "T", "W", "C"가 저장되어있고 type으로 하나씩 불러올 수 있다 -->
+			<trim prefix="OR">
+				<choose>
+					<when test="type == 'I'.toString()">
+						user_id like '%' || #{keyword} || '%'
+					</when>
+					<when test="type == 'E'.toString()">
+						user_email like '%' || #{keyword} || '%'
+					</when>
+					<when test="type == 'N'.toString()">
+						user_nickname like '%' || #{keyword} || '%'
+					</when>
+				</choose>
+			</trim>
+		</foreach>
+	</trim>
+	</sql>
+	
+	
+	 <sql id="criteria2"><!-- 페이지가 처음 작동할 때는 Criteria클래스의 type의 값이 null이기 때문에 foreach문이 동작하지 않는다. 따라서 sql 구문이 생성되지 않는다-->
+	<trim prefix="(" suffix=") AND " prefixOverrides="OR"><!-- trim 태그 sql구문 중에 맨 앞에 or가 존재하면 제거  -->
+	<!-- 이렇게 나오게 해서 AND (title like '%제목%' or content like '%내용%') OR 가 먼저 처리될 수 있도록 처리해줌  -->
+		<foreach collection="typeArr" item="type">	<!-- myBatis에 의해 getter 메서드가 작동한다. typeArr에 "T", "W", "C"가 저장되어있고 type으로 하나씩 불러올 수 있다 -->
+			<trim prefix="OR">
+				<choose>
+					<when test="type == 'I'.toString()">
+						leave_user_id like '%' || #{keyword} || '%'
+					</when>
+					<when test="type == 'N'.toString()">
+						leave_user_name like '%' || #{keyword} || '%'
+					</when>
+					<when test="type == 'E'.toString()">
+						leave_user_email like '%' || #{keyword} || '%'
+					</when>
+				</choose>
+			</trim>
+		</foreach>
+	</trim>
+	</sql>
+	
+ 
+ 	<!-- 관리자 회원 등록 기능 -->
+	 <insert id="addUser">
+	 	insert into
+	 		user_tb(user_id, user_password, user_name, user_zipcode, user_addr, user_addr_detail, user_phone, user_nickname, user_email)
+	 		values(#{user_id}, #{user_password}, #{user_name}, #{user_zipcode}, #{user_addr}, #{user_addr_detail}, #{user_phone}, #{user_nickname}, #{user_email})
+	 </insert>
+	 
+	 <!--  -->
+	 <select id="userList" resultType="com.askinmall.domain.MemberVO">
+	 	<![CDATA[
+		select
+			rn, user_id, user_password, user_name, user_zipcode, user_addr, user_addr_detail, user_phone, user_nickname, user_email, user_email_state, signup_date, update_date, login_date
+		from (
+			select /*+ INDEX(USER_TB PK_USER_ID) */
+			rownum rn, user_id, user_password, user_name, user_zipcode, user_addr, user_addr_detail, user_phone, user_nickname, user_email, user_email_state, signup_date, update_date, login_date
+			from user_tb
+			where
+			
+			]]>
+			<include refid="criteria"></include>
+			
+			<![CDATA[
+				
+				rownum <= (#{pageNum} * #{amount})	
+				
+			)
+			where 
+				rn > ((#{pageNum} - 1) * #{amount})
+			]]>
+	 
+	 </select>
+	 
+	 <select id="getTotal" resultType="int">
+	 	select count(*)
+	 	from user_tb
+	 	where
+	 	<include refid="criteria"></include>
+	 	user_id is not null
+	 </select>
+	 
+	 
+	 <select id="userModifyForm" resultType="com.askinmall.domain.MemberVO">
+	 	select
+	 		user_id, user_password, user_name, user_zipcode, user_addr, user_addr_detail, user_phone, user_nickname, user_email,
+	 		user_email_state, signup_date, update_date, login_date
+	 	from
+	 		user_tb
+	 	where
+	 		user_id = #{user_id}
+	 </select>
+	 
+	 
+	 <update id="modifyUser">
+	 	update
+	 		user_tb
+	 	set
+	 		user_name = #{user_name}, user_zipcode = #{user_zipcode}, user_addr = #{user_addr}, user_addr_detail = #{user_addr_detail}, user_phone = #{user_phone},
+	 		user_nickname = #{user_nickname}, user_email = #{user_email}, update_date = sysdate
+		where
+			user_id = #{user_id}
+	 </update>
+	 
+	 
+	 <update id="changeUserPW">
+	 	update
+			user_tb
+		set
+			user_password = #{new_user_password}
+		where
+			user_id = #{user_id}
+	 </update>
+	 
+	 
+	 <delete id="deleteUser">
+	 	delete
+	 		user_tb
+	 	where
+	 		user_id = #{leave_user_id}
+	 </delete>
+	 
+	 
+	 <update id="updateLeaveUserState">
+	 	update
+	 		leave_user_tb
+	 	set
+	 		leave_user_state = 'Y'	
+	 	where
+	 		leave_user_id = #{leave_user_id}
+	 </update>
+	 
+	 
+ 	 <select id="leaveUserList" resultType="com.askinmall.domain.LeaveMemberVO">
+ 		<![CDATA[
+		select
+			rn, leave_user_no, leave_user_id, leave_user_name, leave_user_email, leave_user_state, leave_date
+		from (
+			select /*+ INDEX(leave_user_tb pk_leave_user_no) */
+			rownum rn, leave_user_no, leave_user_id, leave_user_name, leave_user_email, leave_user_state, leave_date
+			from leave_user_tb
+			where
+			
+			]]>
+			<include refid="criteria2"></include>
+			
+			<![CDATA[
+				
+				rownum <= (#{pageNum} * #{amount})	
+				
+			)
+			where 
+				rn > ((#{pageNum} - 1) * #{amount})
+			]]>
+ 	 </select>
+ 	 
+ 	 <select id="getTotalLeaveUser" resultType="int">
+ 	 	select count(*)
+	 	from leave_user_tb
+	 	where
+	 	<include refid="criteria2"></include>
+	 	leave_user_id is not null
+ 	 </select>
+ 	 
+ 	 
+
+ </mapper> 

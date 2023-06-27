@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.askinmall.mapper.StatChartMapper">
+
+
+	<select id="firstCategorySales" resultMap="firstCategoryMapList">
+		 select
+ 			c.category_name as categoryName, sum(ot.ord_detail_qty * ot.ord_detail_amount) as orderPrice
+		from
+			product_tb p, order_detail_tb ot,
+    			(
+    		select
+    			p.category_name, c.category_cd
+    		from
+    			category_tb c, category_tb p
+    		where
+    			c.category_cd_prt = p.category_cd
+    	) c
+    	
+		where
+			p.prod_no = ot.prod_no
+		and
+			p.category_cd = c.category_cd
+		group by
+			c.category_name
+		order by
+			c.category_name
+	</select>
+
+	<resultMap type="map" id="firstCategoryMapList">
+		<result column="categoryName" property="categoryName" />
+		<result column="orderPrice" property="orderPrice" />
+	</resultMap>
+	
+	
+	<select id="monthlySales" resultMap="monthlySalesMapList">
+		<![CDATA[
+		select
+			to_char(b.dt, 'YY-MM') as payDate, nvl(sum(a.cnt), 0) cnt
+		from
+			(
+		    select to_char(pay_date, 'YY-MM-DD') as paydate, count(*) as cnt
+		    from payment_tb
+		    where pay_date between to_date('2023-01-01', 'YY-MM-DD')
+		                and to_date('2023-12-31', 'YY-MM-DD')
+		    group by to_char(pay_date, 'YY-MM-DD')
+			) a,
+			
+			(
+		    select to_date('2023-01-01', 'YY-MM-DD') + level - 1 as dt
+		    from dual
+		    connect by level <= (to_date('2023-12-31', 'YY-MM-DD')- to_date('2023-01-01', 'YY-MM-DD') + 1)
+			) b
+		
+		where
+			b.dt = a.payDate(+)
+		group by
+			to_char(b.dt, 'YY-MM')
+		order by
+			to_char(b.dt, 'YY-MM')
+		]]>	
+	</select>
+	
+	<resultMap type="map" id="monthlySalesMapList">
+		<result column="payDate" property="payDate" />
+		<result column="cnt" property="cnt" />
+	</resultMap>
+	
+	
+	<select id="bestSellingProd" resultMap="bestSellingProdList">
+		select
+			p.prod_name prodName, od.prod_no prodNo , sum(od.ord_detail_qty) sellAmount, p.prod_price prodPrice
+		from
+			order_detail_tb od, product_tb p
+		where
+			od.prod_no = p.prod_no
+		group by
+			od.prod_no, p.prod_name, p.prod_price
+		order by
+			sum(od.ord_detail_qty) desc
+	</select>
+	
+		<resultMap type="map" id="bestSellingProdList">
+		<result column="prodName" property="prodName" />
+		<result column="prodNo" property="prodNo" />
+		<result column="sellAmount" property="sellAmount" />
+		<result column="prodPrice" property="prodPrice" />
+		</resultMap>
+
+
+</mapper>  

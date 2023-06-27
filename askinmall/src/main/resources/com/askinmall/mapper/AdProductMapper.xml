@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="com.askinmall.mapper.AdProductMapper">
+
+	<!-- 검색 기능 조건 -->
+	<sql id="criteria">
+		<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+			<foreach collection="cri.typeArr" item="type">
+				<trim prefix="OR">
+					<choose>
+						<when test="type == 'N'.toString()">
+							prod_name like '%' || #{cri.keyword} || '%'
+						</when>
+						<when test="type == 'C'.toString()">
+							prod_company like '%' || #{cri.keyword} || '%'
+						</when>
+						<when test="type == 'D'.toString()">
+							prod_detail like '%' || #{cri.keyword} || '%'
+						</when>
+					</choose>
+				</trim>
+			</foreach>
+		</trim>
+	</sql>
+	
+	
+	<!-- 카테고리별 검색 기능 조건 -->
+	<sql id="categroy">
+		<if test="category_cd != null"><!-- 검색 기능 사용시만 동작 -->
+			category_cd = #{category_cd}
+			and
+		</if>
+	</sql>
+	
+	
+	<select id="getCategoryList" resultType="com.askinmall.domain.CategoryVO">
+		select category_cd, category_cd_prt, category_name 
+		from category_tb
+		where category_cd_prt is null
+	</select>
+	
+	
+	<select id="subCategoryList" resultType="com.askinmall.domain.CategoryVO">
+		select category_cd, category_cd_prt, category_name
+		from category_tb
+		where category_cd_prt = #{category_cd}
+	</select>
+	
+	
+	<insert id="insertProd">
+		insert into
+		product_tb(prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder,
+						prod_img, prod_stock, prod_buy_state, upload_date, update_date)
+			values(seq_prod_no.nextval, #{category_cd}, #{prod_name}, #{prod_price}, #{prod_discount}, #{prod_company}, #{prod_detail}, #{prod_upload_folder},
+					#{prod_img}, #{prod_stock}, #{prod_buy_state}, sysdate, sysdate)			
+	</insert>
+	
+	
+	<select id="prodList" resultType="com.askinmall.domain.ProductVO">
+		<![CDATA[
+		select
+			rn, prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder, prod_img, prod_stock, prod_buy_state, upload_date, update_date
+		from (
+			select /*+ INDEX_DESC(PRODUCT_TB PK_PROD_NO) */
+			rownum rn, prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder, prod_img, prod_stock, prod_buy_state, upload_date, update_date
+			from product_tb
+			where
+			
+			]]>
+			<include refid="categroy"></include>
+			<include refid="criteria"></include>
+			
+			<![CDATA[
+				
+				rownum <= (#{cri.pageNum} * #{cri.amount})	
+				
+			)
+			where 
+				rn > ((#{cri.pageNum} - 1) * #{cri.amount})
+			]]>
+	</select>
+	
+	
+	<select id="getTotal" resultType="int">
+		select
+			count(*)
+		from
+			product_tb
+		where
+			<include refid="categroy"></include>
+			<include refid="criteria"></include>
+			prod_no > 0
+	</select>
+	
+	
+	<select id="prodModifyForm" resultType="com.askinmall.domain.ProductVO">
+		select
+			prod_no, category_cd, prod_name, prod_price, prod_discount, prod_company, prod_detail, prod_upload_folder, prod_img, prod_stock, prod_buy_state, upload_date, update_date
+		from
+			product_tb
+		where
+			prod_no = ${prod_no}	
+	</select>
+	
+	
+	<select id="getPrtCategory" resultType="com.askinmall.domain.CategoryVO">
+		select
+			category_cd, category_cd_prt, category_name
+		from
+			category_tb
+		where
+			category_cd = (
+			select category_cd_prt from category_tb where category_cd = #{category_cd}
+			)	
+	
+	</select>
+	
+	<update id="modifyProd">
+		update
+			product_tb
+		set
+			category_cd = #{category_cd}, prod_name = #{prod_name}, prod_price = #{prod_price}, prod_discount = #{prod_discount}, prod_company = #{prod_company}, prod_detail = #{prod_detail},
+			prod_upload_folder =  #{prod_upload_folder}, prod_img = #{prod_img}, prod_stock = #{prod_stock}, prod_buy_state = #{prod_buy_state}, update_date = sysdate
+		where
+			prod_no = ${prod_no}
+	</update>
+	
+	<delete id="deleteProd">
+		delete
+			product_tb
+		where
+			prod_no = #{prod_no}
+	</delete>
+	
+	
+	<update id="modifyCheckedProd">
+		<foreach collection="list" item="item" open="declare begin" separator=";" close="; end;">
+		update
+			product_tb
+		set
+			prod_price = #{item.prod_price}, prod_buy_state = #{item.prod_buy_state}, update_date = sysdate
+		where
+			prod_no = ${item.prod_no}	
+		</foreach>	 	
+	</update>
+	
+	<delete id="deleteCheckedProd">
+		delete
+			product_tb
+		where
+			prod_no in
+			<foreach collection="list" item="prod_no" open="(" separator="," close=")">
+			${prod_no}
+			</foreach>	
+	</delete>
+
+</mapper>  

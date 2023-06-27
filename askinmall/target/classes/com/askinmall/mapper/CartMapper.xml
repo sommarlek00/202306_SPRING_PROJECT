@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.askinmall.mapper.CartMapper">
+
+
+<!-- 장바구니 페이지 -->
+<select id="cartList" resultType="com.askinmall.dto.CartListDTO">
+	select
+		rownum no, c.cart_no, p.prod_no, p.prod_img, p.prod_upload_folder, p.prod_name, p.prod_price, c.cart_qty, prod_price * cart_qty as unitprice
+	from
+		product_tb p inner join cart_tb c
+	on
+		p.prod_no = c.prod_no
+	where
+		c.user_id = #{user_id}			
+</select>
+
+<!-- 장바구니 총 금액 -->
+<select id="cartTotalAmount" resultType="int">
+	select
+		sum(prod_price * cart_qty) as cartTotalAmount
+	from
+		product_tb p inner join cart_tb c
+	on
+		p.prod_no = c.prod_no
+	where
+		c.user_id = #{user_id}
+</select>
+
+
+<!-- 장바구니 상품 추가 -->
+<insert id="addCartProd">
+	merge into
+		cart_tb
+	using
+		dual
+	on
+		(user_id = #{user_id} and prod_no = #{prod_no})
+	when matched then
+		update
+			set cart_qty = cart_qty + #{cart_qty}
+	when not matched then
+		insert(cart_no, prod_no, user_id, cart_qty)
+		values(seq_cart_no.nextval, #{prod_no}, #{user_id}, #{cart_qty})				
+</insert>
+
+
+<!-- 장바구니 상품 수량 변경 -->
+<update id="changeCartQty">
+	update
+		cart_tb
+	set
+		cart_qty = #{cart_qty}
+	where
+		cart_no = #{cart_no}	
+</update>
+
+
+<!-- 장바구니 상품 삭제 -->
+<delete id="deleteCartProd">
+	delete
+		cart_tb
+	where
+		cart_no = #{cart_no}	
+</delete>
+
+<!-- 장바구니 비우기 -->
+<delete id="emptyCart">
+	delete
+		cart_tb
+	where
+		user_id = #{user_id}
+</delete>
+
+
+
+
+
+</mapper>  
